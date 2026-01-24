@@ -1,0 +1,272 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ride CRUD WebSocket</title>
+<style>
+  body { font-family: Arial; margin: 20px; }
+  #log { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; background: #f9f9f9; }
+  input { margin: 5px; }
+  .log-created { color: green; }
+  .log-updated { color: blue; }
+  .log-deleted { color: red; }
+  .log-error { color: orange; }
+  .log-default { color: black; }
+  pre { margin: 0; font-family: monospace; }
+</style>
+</head>
+<body>
+<h1>Ride CRUD WebSocket Demo</h1>
+
+<h3>Create Ride</h3>
+<input id="userId" placeholder="User ID" />
+<input id="driverId" placeholder="Driver ID" />
+<input id="vehicleId" placeholder="Vehicle ID" />
+<input id="pickup" placeholder="Pickup Address" />
+<input id="drop" placeholder="Drop Address" />
+<input id="fare" placeholder="Estimated Fare" />
+<button onclick="createRide()">Create Ride</button>
+
+<h3>Read Rides</h3>
+<button onclick="readRides()">Load All Rides</button>
+
+<h3>Update Ride</h3>
+<input id="updateId" placeholder="Ride ID" />
+<input id="updateStatus" placeholder="New Status" />
+<button onclick="updateRide()">Update Ride</button>
+
+<h3>Delete Ride</h3>
+<input id="deleteId" placeholder="Ride ID" />
+<button onclick="deleteRide()">Delete Ride</button>
+
+<h3>Get Ride by ID</h3>
+<input id="getRideId" placeholder="Ride ID" />
+<button onclick="getRide()">Get Ride</button>
+
+<h3>Live Updates</h3>
+<div id="log"></div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  const logDiv = document.getElementById('log');
+
+  function log(msg, type='default') {
+    // If msg is an object, pretty print JSON
+    if (typeof msg === "object") {
+      msg = `<pre>${JSON.stringify(msg, null, 2)}</pre>`;
+    }
+    const className = type === 'default' ? 'log-default' :
+                      type === 'created' ? 'log-created' :
+                      type === 'updated' ? 'log-updated' :
+                      type === 'deleted' ? 'log-deleted' :
+                      type === 'error' ? 'log-error' : 'log-default';
+    logDiv.innerHTML += `<div class="${className}">${msg}</div>`;
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  // CRUD functions
+  function createRide() {
+    socket.emit('createRide', {
+      UserId: parseInt(document.getElementById('userId').value),
+      DriverId: parseInt(document.getElementById('driverId').value),
+      VehicleId: parseInt(document.getElementById('vehicleId').value),
+      pickup_address: document.getElementById('pickup').value,
+      drop_address: document.getElementById('drop').value,
+      estimated_fare: parseFloat(document.getElementById('fare').value)
+    });
+  }
+
+  function readRides() { socket.emit('readRides'); }
+
+  function updateRide() {
+    socket.emit('updateRide', {
+      id: parseInt(document.getElementById('updateId').value),
+      data: { status: document.getElementById('updateStatus').value }
+    });
+  }
+
+  function deleteRide() {
+    socket.emit('deleteRide', parseInt(document.getElementById('deleteId').value));
+  }
+
+  function getRide() {
+    const id = parseInt(document.getElementById("getRideId").value);
+    socket.emit("getRide", id);
+  }
+
+  // Socket listeners with colored, pretty-printed logs
+  socket.on('ridesList', rides => log(rides, 'default'));
+  socket.on('rideCreated', ride => log(ride, 'created'));
+  socket.on('rideUpdated', ride => log(ride, 'updated'));
+  socket.on('rideDeleted', id => log({ deletedRideId: id }, 'deleted'));
+  socket.on('rideData', res => {
+    if (res.status === 'success') {
+      log(res, 'default');
+    } else {
+      log(res, 'error');
+    }
+  });
+</script>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Ride Socket Demo</title>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<style>
+  body { font-family: Arial; margin: 20px; }
+  h2 { margin-top: 30px; }
+  input { margin: 5px; padding: 6px; width: 300px; }
+  button { padding: 6px 12px; cursor: pointer; }
+  #log {
+    margin-top: 20px;
+    height: 350px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    background: #f9f9f9;
+    padding: 10px;
+  }
+  pre { margin: 0; font-size: 13px; }
+</style>
+</head>
+
+<body>
+
+<h1>🚖 Ride Creation – Socket.IO Demo</h1>
+
+<!-- ================= USER ================= -->
+<h2>1️⃣ Get User</h2>
+<input id="userMobile" placeholder="User Mobile No" />
+<button onclick="getUser()">Get User</button>
+
+<!-- ================= DRIVER ================= -->
+<h2>2️⃣ Get Driver</h2>
+<input id="driverId" placeholder="Driver ID" />
+<button onclick="getDriver()">Get Driver</button>
+
+<!-- ================= VEHICLE ================= -->
+<h2>3️⃣ Get Vehicle</h2>
+<input id="vehicleDriverId" placeholder="Driver ID (for vehicle)" />
+<button onclick="getVehicle()">Get Vehicle</button>
+
+<!-- ================= RIDE ================= -->
+<h2>4️⃣ Create Ride</h2>
+<input id="pickup" placeholder="Pickup Address" />
+<input id="drop" placeholder="Drop Address" />
+<button onclick="createRide()">Create Ride</button>
+
+<h2>📡 Live Logs</h2>
+<div id="log"></div>
+
+<script>
+  const socket = io();
+  const logDiv = document.getElementById("log");
+
+  let selectedUser = null;
+  let selectedDriver = null;
+  let selectedVehicle = null;
+
+  function log(title, data) {
+    logDiv.innerHTML += `
+      <pre><b>${title}</b>\n${JSON.stringify(data, null, 2)}</pre><hr/>
+    `;
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  /* ================= ACTIONS ================= */
+
+  function getUser() {
+    socket.emit("getUser", {
+      mobile_no: document.getElementById("userMobile").value
+    });
+  }
+
+  function getDriver() {
+    socket.emit("getDriver", {
+      id: parseInt(document.getElementById("driverId").value)
+    });
+  }
+
+  function getVehicle() {
+    socket.emit("getVehicle", {
+      driver_id: parseInt(document.getElementById("vehicleDriverId").value)
+    });
+  }
+
+  function createRide() {
+    if (!selectedUser || !selectedDriver || !selectedVehicle) {
+      alert("Please fetch User, Driver & Vehicle first");
+      return;
+    }
+
+    // socket.emit("createRideRequest", {
+    //   user_id: selectedUser.user_id,
+    //   driver_id: selectedDriver.id,
+    //   vehicle_type_id: selectedVehicle.id,
+
+    //   pickup_address: document.getElementById("pickup").value,
+    //   pickupLat: "23.0278567",
+    //   pickupLng: "72.5572315",
+
+    //   drop_address: document.getElementById("drop").value,
+    //   dropLat: "23.0284879",
+    //   dropLng: "72.6002743",
+
+    //   paymentmode: "cash",
+    //   estimated_fare: 89.0,
+    //   is_reserved: false
+    // });
+    socket.emit("createRideRequest", {
+  user_data: selectedUser.user_id,   // ✅ STRING, not number
+  driver_id: selectedDriver.id,
+  vehicle_type_id: selectedVehicle.id,
+
+  pickup_address: document.getElementById("pickup").value,
+  pickupLat: "23.0278567",
+  pickupLng: "72.5572315",
+
+  drop_address: document.getElementById("drop").value,
+  dropLat: "23.0284879",
+  dropLng: "72.6002743",
+
+  paymentmode: "cash",
+  estimated_fare: 89,
+  is_reserved: false,
+  status: "pending"
+});
+
+  }
+
+  /* ================= LISTENERS ================= */
+
+  socket.on("userData", (data) => {
+    selectedUser = data;
+    log("✅ User Loaded", data);
+  });
+
+  socket.on("driverData", (data) => {
+    selectedDriver = data;
+    log("✅ Driver Loaded", data);
+  });
+
+  socket.on("vehicleData", (data) => {
+    selectedVehicle = data;
+    log("✅ Vehicle Loaded", data);
+  });
+
+  socket.on("rideCreated", (data) => {
+    log("🚕 Ride Created (FINAL RESPONSE)", data);
+  });
+
+  socket.on("socketError", (msg) => {
+    log("❌ Error", msg);
+  });
+</script>
+
+</body>
+</html>
