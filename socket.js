@@ -91,7 +91,8 @@
 const { Server } = require("socket.io");
 const axios = require("axios");
 
-const API_BASE = "https://onlymeterindia.info"; // change if needed
+// const API_BASE = "https://onlymeterindia.info"; Old
+const API_BASE = "https://adminapi.onlymeterindia.com"; // New : change if needed 
 
 function initSocket(server) {
   const io = new Server(server, {
@@ -177,6 +178,86 @@ function initSocket(server) {
           "socketError",
           err.response?.data || "Ride creation failed",
         );
+      }
+    });
+
+    /* ================= GET ALL RIDES ================= */
+
+    socket.on("getAllRides", async () => {
+      try {
+        const { data } = await axios.get(`${API_BASE}/ride_request/`);
+        socket.emit("allRidesData", data.data ?? data);
+      } catch (err) {
+        socket.emit("socketError", "Failed to fetch rides");
+      }
+    });
+
+    /* ================= GET RIDE BY ID ================= */
+
+    socket.on("getRideById", async ({ id }) => {
+      try {
+        const { data } = await axios.get(`${API_BASE}/ride_request/${id}/`);
+        socket.emit("rideData", data.data ?? data);
+      } catch (err) {
+        socket.emit("socketError", "Ride not found");
+      }
+    });
+
+    /* ================= GET RIDES BY DRIVER ================= */
+
+    socket.on("getRidesByDriver", async ({ driver_id }) => {
+      try {
+        const { data } = await axios.get(
+          `${API_BASE}/ride_request/driver/${driver_id}/`,
+        );
+        socket.emit("driverRidesData", data.data ?? data);
+      } catch (err) {
+        socket.emit("socketError", "Driver rides not found");
+      }
+    });
+
+    /* ================= GET RIDES BY USER ================= */
+
+    socket.on("getRidesByUser", async ({ user_id }) => {
+      try {
+        const { data } = await axios.get(
+          `${API_BASE}/ride_request/user/${user_id}/`,
+        );
+        socket.emit("userRidesData", data.data ?? data);
+      } catch (err) {
+        socket.emit("socketError", "User rides not found");
+      }
+    });
+
+    /* ================= UPDATE RIDE ================= */
+
+    socket.on("updateRide", async ({ id, payload }) => {
+      try {
+        const { data } = await axios.put(
+          `${API_BASE}/ride_request/${id}/`,
+          payload,
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        io.emit("rideUpdated", data);
+      } catch (err) {
+        socket.emit("socketError", err.response?.data || "Ride update failed");
+      }
+    });
+
+    /* ================= DELETE RIDE ================= */
+
+    socket.on("deleteRide", async ({ id }) => {
+      try {
+        await axios.delete(`${API_BASE}/ride_request/${id}/`);
+
+        io.emit("rideDeleted", { id });
+      } catch (err) {
+        socket.emit("socketError", err.response?.data || "Ride delete failed");
       }
     });
   });

@@ -125,7 +125,7 @@
   button { padding: 6px 12px; cursor: pointer; }
   #log {
     margin-top: 20px;
-    height: 350px;
+    height: 400px;
     overflow-y: auto;
     border: 1px solid #ccc;
     background: #f9f9f9;
@@ -137,7 +137,7 @@
 
 <body>
 
-<h1>🚖 Ride Creation – Socket.IO Demo</h1>
+<h1>🚖 Ride Socket.IO Demo</h1>
 
 <!-- ================= USER ================= -->
 <h2>1️⃣ Get User</h2>
@@ -160,6 +160,36 @@
 <input id="drop" placeholder="Drop Address" />
 <button onclick="createRide()">Create Ride</button>
 
+<!-- ================= GET ALL RIDES ================= -->
+<h2>5️⃣ Get All Rides</h2>
+<button onclick="getAllRides()">Get All Rides</button>
+
+<!-- ================= GET RIDE BY ID ================= -->
+<h2>6️⃣ Get Ride By ID</h2>
+<input id="rideId" placeholder="Ride ID" />
+<button onclick="getRideById()">Get Ride</button>
+
+<!-- ================= GET RIDES BY DRIVER ================= -->
+<h2>7️⃣ Get Rides By Driver</h2>
+<input id="rideDriverId" placeholder="Driver ID" />
+<button onclick="getRidesByDriver()">Get Driver Rides</button>
+
+<!-- ================= GET RIDES BY USER ================= -->
+<h2>8️⃣ Get Rides By User</h2>
+<input id="rideUserId" placeholder="User ID" />
+<button onclick="getRidesByUser()">Get User Rides</button>
+
+<!-- ================= UPDATE RIDE ================= -->
+<h2>9️⃣ Update Ride</h2>
+<input id="updateRideId" placeholder="Ride ID" />
+<input id="updatePickup" placeholder="New Pickup Address" />
+<button onclick="updateRide()">Update Ride</button>
+
+<!-- ================= DELETE RIDE ================= -->
+<h2>🔟 Delete Ride</h2>
+<input id="deleteRideId" placeholder="Ride ID" />
+<button onclick="deleteRide()">Delete Ride</button>
+
 <h2>📡 Live Logs</h2>
 <div id="log"></div>
 
@@ -179,23 +209,16 @@
   }
 
   /* ================= ACTIONS ================= */
-
   function getUser() {
-    socket.emit("getUser", {
-      mobile_no: document.getElementById("userMobile").value
-    });
+    socket.emit("getUser", { mobile_no: document.getElementById("userMobile").value });
   }
 
   function getDriver() {
-    socket.emit("getDriver", {
-      id: parseInt(document.getElementById("driverId").value)
-    });
+    socket.emit("getDriver", { id: parseInt(document.getElementById("driverId").value) });
   }
 
   function getVehicle() {
-    socket.emit("getVehicle", {
-      driver_id: parseInt(document.getElementById("vehicleDriverId").value)
-    });
+    socket.emit("getVehicle", { driver_id: parseInt(document.getElementById("vehicleDriverId").value) });
   }
 
   function createRide() {
@@ -203,70 +226,63 @@
       alert("Please fetch User, Driver & Vehicle first");
       return;
     }
-
-    // socket.emit("createRideRequest", {
-    //   user_id: selectedUser.user_id,
-    //   driver_id: selectedDriver.id,
-    //   vehicle_type_id: selectedVehicle.id,
-
-    //   pickup_address: document.getElementById("pickup").value,
-    //   pickupLat: "23.0278567",
-    //   pickupLng: "72.5572315",
-
-    //   drop_address: document.getElementById("drop").value,
-    //   dropLat: "23.0284879",
-    //   dropLng: "72.6002743",
-
-    //   paymentmode: "cash",
-    //   estimated_fare: 89.0,
-    //   is_reserved: false
-    // });
     socket.emit("createRideRequest", {
-  user_data: selectedUser.user_id,   // ✅ STRING, not number
-  driver_id: selectedDriver.id,
-  vehicle_type_id: selectedVehicle.id,
+      user_data: selectedUser.user_id,
+      driver_id: selectedDriver.id,
+      vehicle_type_id: selectedVehicle.id,
+      pickup_address: document.getElementById("pickup").value,
+      pickupLat: "23.0278567",
+      pickupLng: "72.5572315",
+      drop_address: document.getElementById("drop").value,
+      dropLat: "23.0284879",
+      dropLng: "72.6002743",
+      paymentmode: "cash",
+      estimated_fare: 89,
+      is_reserved: false,
+      status: "pending"
+    });
+  }
 
-  pickup_address: document.getElementById("pickup").value,
-  pickupLat: "23.0278567",
-  pickupLng: "72.5572315",
+  function getAllRides() {
+    socket.emit("getAllRides");
+  }
 
-  drop_address: document.getElementById("drop").value,
-  dropLat: "23.0284879",
-  dropLng: "72.6002743",
+  function getRideById() {
+    socket.emit("getRideById", { id: parseInt(document.getElementById("rideId").value) });
+  }
 
-  paymentmode: "cash",
-  estimated_fare: 89,
-  is_reserved: false,
-  status: "pending"
-});
+  function getRidesByDriver() {
+    socket.emit("getRidesByDriver", { driver_id: parseInt(document.getElementById("rideDriverId").value) });
+  }
 
+  function getRidesByUser() {
+    socket.emit("getRidesByUser", { user_id: document.getElementById("rideUserId").value });
+  }
+
+  function updateRide() {
+    const id = parseInt(document.getElementById("updateRideId").value);
+    const pickup = document.getElementById("updatePickup").value;
+    socket.emit("updateRide", { id, payload: { pickup_address: pickup } });
+  }
+
+  function deleteRide() {
+    const id = parseInt(document.getElementById("deleteRideId").value);
+    socket.emit("deleteRide", { id });
   }
 
   /* ================= LISTENERS ================= */
+  socket.on("userData", (data) => { selectedUser = data; log("✅ User Loaded", data); });
+  socket.on("driverData", (data) => { selectedDriver = data; log("✅ Driver Loaded", data); });
+  socket.on("vehicleData", (data) => { selectedVehicle = data; log("✅ Vehicle Loaded", data); });
+  socket.on("rideCreated", (data) => { log("🚕 Ride Created", data); });
+  socket.on("allRidesData", (data) => { log("📄 All Rides", data); });
+  socket.on("rideData", (data) => { log("📄 Ride By ID", data); });
+  socket.on("driverRidesData", (data) => { log("📄 Rides By Driver", data); });
+  socket.on("userRidesData", (data) => { log("📄 Rides By User", data); });
+  socket.on("rideUpdated", (data) => { log("✏️ Ride Updated", data); });
+  socket.on("rideDeleted", (data) => { log("🗑️ Ride Deleted", data); });
+  socket.on("socketError", (msg) => { log("❌ Error", msg); });
 
-  socket.on("userData", (data) => {
-    selectedUser = data;
-    log("✅ User Loaded", data);
-  });
-
-  socket.on("driverData", (data) => {
-    selectedDriver = data;
-    log("✅ Driver Loaded", data);
-  });
-
-  socket.on("vehicleData", (data) => {
-    selectedVehicle = data;
-    log("✅ Vehicle Loaded", data);
-  });
-
-  socket.on("rideCreated", (data) => {
-    log("🚕 Ride Created (FINAL RESPONSE)", data);
-  });
-
-  socket.on("socketError", (msg) => {
-    log("❌ Error", msg);
-  });
 </script>
-
 </body>
 </html>
